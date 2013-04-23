@@ -26,7 +26,7 @@ void setWordGuessed();
 void setNewChooser(User *newChooser);
 void updateClientScreens();
 void playGame();
-void checkIfGameOver();
+bool checkIfGameOver();
 
 //Meant to be a circularly linked list
 User *userList;
@@ -68,15 +68,24 @@ void playGame() {
 		setWordGuessed();
 
 		bool gameOver = false;
+		lettersGuessed.clear();
+		incorrectLettersGuessed.clear();
 		User *guesser = userList;
 		numIncorrectGuesses = 0;
+		
 		while (!gameOver) {
 			guesser = guesser->next;
 			if (guesser->status == CHOOSER) guesser = guesser->next;		//Prevent guesser from ever being chooser;
 
 			char guess = askUserForLetter(guesser);
-			if (checkIfLetterIsInWord(guess) == false) numIncorrectGuesses++;
-			checkIfGameOver();
+			if (checkIfLetterIsInWord(guess) == false){
+				numIncorrectGuesses++;
+
+				incorrectLettersGuessed.push_buck(letter);
+			} 
+			// push letter to letters guessed
+			lettersGuessed.push_buck(letter);
+			gameOver = checkIfGameOver();
 			updateClientScreens();
 			if (gameOver) winningUser = guesser;
 		}
@@ -136,7 +145,7 @@ void addNewUserToUserList(int clientFD) {
 	newUser->next = userList;		//So it is circularlly linked
 
 	User *curPtr = userList;
-	while(curPtr->next != userList) curPtr = curPtr->next;
+	while((curPtr->next)->clientFD != userList->clientFD) curPtr = curPtr->next;
 	curPtr->next = newUser;
 }
 bool checkIfUserIsStillConnected(int clientFD) {
@@ -150,28 +159,29 @@ void removeUserFromList(int clientFD) {
 	if (clientFD == curPtr->clientFD) { //Case removing head of list
 		User *tempUserList = userList;
 		userList = userList->next;
-
 		while((curPtr->next)->clientFD != tempUserList->clientFD) curPtr = curPtr->next;
 		curPtr->next = userList;
-
 		free(tempUserList);
 	}
 	else {
 		while((curPtr->next)->clientFD != clientFD) curPtr = curPtr->next;
 		User *temp = curPtr->next;
 		curPtr->next = (curPtr->next)->next;
-
 		free(temp);
 	}
-
 }
 
 void updateClientScreens() {
+	// Encurses magic here to all the users
+	// You should use all of the global variables
 
 	return;
 }
 
-void checkIfGameOver() {
-
-	return;
+bool checkIfGameOver() {
+	// Returns true is game is over
+	//		i.e. All $ have been removed from wordGuesses
+	//			i.e. All letters have been revealed to the players
+	// Returns false otherwies
+	return (wordGuessed.find('$') == -1);
 }
