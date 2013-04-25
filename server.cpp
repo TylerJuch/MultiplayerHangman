@@ -126,24 +126,9 @@ void doprocessing (int sock)
 {
 	addNewUserToUserList(sock);
 	
-    int n;
-    char buffer[256];
-
-    bzero(buffer,256);
-
-    n = read(sock,buffer,255);
-    if (n < 0)
-    {
-        perror("ERROR reading from socket");
-        exit(1);
-    }
-    printf("Server recieved input: %s\n",buffer);
-    n = write(sock,"Guess received!",18);
-    if (n < 0) 
-    {
-        perror("ERROR writing to socket");
-        exit(1);
-    }
+	
+	/* Client needs to wait here */
+    
 }
 
 void playGame() {
@@ -197,6 +182,28 @@ void askUserForWord() {
 	no spaces? would be easier. could change later.
 	*/
 	
+	int sock = chooser->clientFD;
+	int n;
+    char buffer[256];
+	
+	n = write(sock,"Enter a word for the guessors to guess: ",255);
+    if (n < 0) 
+    {
+        perror("ERROR writing to socket");
+        exit(1);
+    }
+	
+    bzero(buffer,256);
+
+    n = read(sock,buffer,255);
+    if (n < 0)
+    {
+        perror("ERROR reading from socket");
+        exit(1);
+    }
+	wordUnguessed = buffer;
+	cout << "Server recieved word: " << wordUnguessed << " \n";
+
 	return;
 }
 
