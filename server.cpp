@@ -2,6 +2,8 @@
 #include <vector>
 #include <string>
 #include <stdlib.h>
+#include <stdio.h>
+
 
 using namespace std;
 
@@ -81,10 +83,10 @@ void playGame() {
 			if (checkIfLetterIsInWord(guess) == false){
 				numIncorrectGuesses++;
 
-				incorrectLettersGuessed.push_buck(letter);
+				incorrectLettersGuessed.push_back(guess);
 			} 
 			// push letter to letters guessed
-			lettersGuessed.push_buck(letter);
+			lettersGuessed.push_back(guess);
 			gameOver = checkIfGameOver();
 			updateClientScreens();
 			if (gameOver) winningUser = guesser;
