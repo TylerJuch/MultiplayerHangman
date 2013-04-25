@@ -124,11 +124,7 @@ int main() {
 
 void doprocessing (int sock)
 {
-	/* NEED TO ADD NEW USER TO USERS LIST */
-	User* newUser = new User();
-	newUser->clientFD = sock;
-	newUser->status = GUESSER;
-	//add to list here
+	addNewUserToUserList(sock);
 	
     int n;
     char buffer[256];
@@ -200,6 +196,7 @@ void askUserForWord() {
 	must not contain $
 	no spaces? would be easier. could change later.
 	*/
+	
 	return;
 }
 
