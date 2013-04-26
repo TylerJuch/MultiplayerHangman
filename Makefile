@@ -1,3 +1,5 @@
+LDLIBS= -lpthread
+
 all: server
 
 test: server

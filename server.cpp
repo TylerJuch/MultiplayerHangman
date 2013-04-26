@@ -7,6 +7,8 @@
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <strings.h>
+#include <pthread.h>
+#include <unistd.h>
 
 using namespace std;
 
@@ -30,9 +32,10 @@ void removeUserFromList(int clientFD);
 void setWordGuessed();
 void setNewChooser(User *newChooser);
 void updateClientScreens();
-void playGame();
+void *playGame(void *);
 bool checkIfGameOver();
 void doprocessing (int sock);
+char *sockreadline(int fd);
 
 //Meant to be a circularly linked list
 User *userList;
@@ -58,9 +61,10 @@ string wordGuessed;
 
 int main() {
 
-	//initialize the userlist
+	//initialize the globals
 	userList = NULL;
-	
+	chooser = NULL;
+
 	//Handle user connection crap
 	int sockfd, newsockfd, portno, clilen;
     char buffer[256];
@@ -94,6 +98,7 @@ int main() {
      */
     listen(sockfd,5);
     clilen = sizeof(cli_addr);
+    pthread_t gameLoopThread;
     while (1) 
     {
         newsockfd = accept(sockfd, (struct sockaddr *) &cli_addr, (socklen_t*)&clilen);
@@ -102,9 +107,9 @@ int main() {
             perror("ERROR on accept");
             exit(1);
         }
-
         doprocessing(newsockfd);
-        std::cout << "Client Connected" << std::endl;
+        if(userList->next == userList) pthread_create(&gameLoopThread, NULL, playGame, NULL);
+        cout << "Client Connected" << endl;
 
     } /* end of while */
 	
@@ -120,44 +125,51 @@ void doprocessing (int sock)
     
 }
 
-void playGame() {
+void *playGame(void *placeholder) {
 	// Need to check and see if users are still connected in there at some point? Maybe often?
- 
+
+	//for the first user to connect
+	chooser = userList;
+
 	User *winningUser = userList;
-	while(true) {
-		// Busy wait here for number connected players to be at least 2?
-		setNewChooser(winningUser);
-		askUserForWord();
-		setWordGuessed();
+	// while(true) {
+	// 	// Busy wait here for number connected players to be at least 2?
+	 	setNewChooser(winningUser);
+	 	askUserForWord();
+	 	setWordGuessed();
 
-		bool gameOver = false;
-		lettersGuessed.clear();
-		incorrectLettersGuessed.clear();
-		User *guesser = userList;
-		numIncorrectGuesses = 0;
+	// 	bool gameOver = false;
+	// 	lettersGuessed.clear();
+	// 	incorrectLettersGuessed.clear();
+	// 	User *guesser = userList;
+	// 	numIncorrectGuesses = 0;
 		
-		while (!gameOver) {
-			guesser = guesser->next;
-			if (guesser->status == CHOOSER) guesser = guesser->next;		//Prevent guesser from ever being chooser;
+	// 	while (!gameOver) {
+	// 		guesser = guesser->next;
+	// 		if (guesser->status == CHOOSER) guesser = guesser->next;		//Prevent guesser from ever being chooser;
 
-			char guess = askUserForLetter(guesser);
-			if (checkIfLetterIsInWord(guess) == false){
-				numIncorrectGuesses++;
+	// 		char guess = askUserForLetter(guesser);
+	// 		if (checkIfLetterIsInWord(guess) == false){
+	// 			numIncorrectGuesses++;
 
-				incorrectLettersGuessed.push_back(guess);
-			} 
-			// push letter to letters guessed
-			lettersGuessed.push_back(guess);
-			gameOver = checkIfGameOver();
-			updateClientScreens();
-			if (gameOver) winningUser = guesser;
-		}
-	}
+	// 			incorrectLettersGuessed.push_back(guess);
+	// 		} 
+	// 		// push letter to letters guessed
+	// 		lettersGuessed.push_back(guess);
+	// 		gameOver = checkIfGameOver();
+	// 		updateClientScreens();
+	// 		if (gameOver) winningUser = guesser;
+	// 	}
+	// }
+	cout << "Leaving Game Loop" << endl;
+	pthread_exit(0);
 }
 
 void setNewChooser(User *newChooser) {
 	chooser->status = GUESSER;
 	newChooser->status = CHOOSER;
+	chooser = newChooser;
+	cout << "User " << chooser->clientFD << " is now the chooser" << endl;
 }
 
 void askUserForWord() {
@@ -172,35 +184,15 @@ void askUserForWord() {
 	*/
 	
 	int sock = chooser->clientFD;
-	int n;
-    char buffer[256];
-	
-	n = write(sock,"Enter a word for the guessors to guess: ",255);
-    if (n < 0) 
-    {
-        perror("ERROR writing to socket");
-        exit(1);
-    }
-	
-    bzero(buffer,256);
-
-    n = read(sock,buffer,255);
-    if (n < 0)
-    {
-        perror("ERROR reading from socket");
-        exit(1);
-    }
-	wordUnguessed = buffer;
-	cout << "Server recieved word: " << wordUnguessed << " \n";
-
-	return;
+	wordGuessed = sockreadline(sock);
 }
 
 void setWordGuessed() {
 	// Builds a string of correct length filled with $s.
-	for(int i =0; i < wordUnguessed.length(); i++) {
+	for(int i =0; i < wordGuessed.length(); i++) {
 		wordUnguessed+="$";
 	}
+	cout << "Word: " << wordGuessed << "Hidden Word: " << wordUnguessed << endl;
 }
 
 char askUserForLetter(User* guessor) {
@@ -232,6 +224,7 @@ void addNewUserToUserList(int clientFD) {
 
 	if(userList == NULL) {
 		newUser->next = newUser;
+		userList = newUser;
 	}
 	else {
 		User *curPtr = userList;
@@ -276,4 +269,34 @@ bool checkIfGameOver() {
 	//			i.e. All letters have been revealed to the players
 	// Returns false otherwies
 	return (wordGuessed.find('$') == -1);
+}
+
+//user this for reading for a socket
+char *sockreadline(int fd) {
+	char *buf = (char *) malloc(BUFSIZ);
+	int len = 0;
+	char c;
+	int count;
+
+	while (1) {
+
+		if (read(fd, &c, 1) != 1) {
+			return NULL;
+		}
+
+		buf[len] = c;
+	
+		switch(c) {
+		case '\n':
+		case '\r':
+		case '\f':
+			if (len == 0) continue;
+
+			buf[len] = '\0';
+			return buf;
+		}
+
+		len++;
+		buf = (char *)realloc(buf, len);
+	}
 }
