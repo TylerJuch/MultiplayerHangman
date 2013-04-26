@@ -57,6 +57,9 @@ string wordUnguessed;
 string wordGuessed;
 
 int main() {
+
+	//initialize the userlist
+	userList = NULL;
 	
 	//Handle user connection crap
 	int sockfd, newsockfd, portno, clilen;
@@ -99,24 +102,10 @@ int main() {
             perror("ERROR on accept");
             exit(1);
         }
-        /* Create child process */
-        int pid = fork();
-        if (pid < 0)
-        {
-            perror("ERROR on fork");
-	    exit(1);
-        }
-        if (pid == 0)  
-        {
-            /* This is the client process */
-            close(sockfd);
-            doprocessing(newsockfd);
-            exit(0);
-        }
-        else
-        {
-            close(newsockfd);
-        }
+
+        doprocessing(newsockfd);
+        std::cout << "Client Connected" << std::endl;
+
     } /* end of while */
 	
 	//playGame();
@@ -126,7 +115,6 @@ int main() {
 void doprocessing (int sock)
 {
 	addNewUserToUserList(sock);
-	
 	
 	/* Client needs to wait here */
     
@@ -242,9 +230,15 @@ void addNewUserToUserList(int clientFD) {
 	newUser->clientFD = clientFD;
 	newUser->next = userList;		//So it is circularlly linked
 
-	User *curPtr = userList;
-	while((curPtr->next)->clientFD != userList->clientFD) curPtr = curPtr->next;
-	curPtr->next = newUser;
+	if(userList == NULL) {
+		newUser->next = newUser;
+	}
+	else {
+		User *curPtr = userList;
+		int headId = curPtr->clientFD;
+		while((curPtr->next)->clientFD != headId) curPtr = curPtr->next;
+		curPtr->next = newUser;
+	}
 }
 bool checkIfUserIsStillConnected(int clientFD) {
 	// Can reuse code from remote shell projected

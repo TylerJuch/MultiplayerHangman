@@ -6,4 +6,4 @@ test: server
 server: server.cpp
 
 clean:
-	rm -f *.o osproj
+	rm -f *.o server
