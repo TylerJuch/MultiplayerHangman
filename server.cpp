@@ -14,15 +14,14 @@
 
 using namespace std;
 
-//void askUserForWord();
-char askUserForLetter();
-//bool checkIfLetterIsInWord(char letter);
+bool checkIfLetterIsInWord(char letter);
 bool checkIfUserIsStillConnected(int clientFD);
 void setWordGuessed();
 void updateClientScreens();
 void *playGame(void *);
 bool checkIfGameOver();
 
+static pthread_mutex_t userListMutex = PTHREAD_MUTEX_INITIALIZER;
 int numIncorrectGuesses;
 vector<char> lettersGuessed;
 vector<char> incorrectLettersGuessed;
@@ -86,8 +85,6 @@ int main() {
         }
         userList->addUser(newsockfd);
         if(userList->isOneUser()) pthread_create(&gameLoopThread, NULL, playGame, NULL);
-        cout << "Client Connected" << endl;
-
     } /* end of while */
 	
 	//playGame();
@@ -98,16 +95,18 @@ void *playGame(void *placeholder) {
 	// Need to check and see if users are still connected in there at some point? Maybe often?
 
 	// while(true) {
-	// 	// Busy wait here for number connected players to be at least 2?
-	 	// setNewChooser(winningUser);
-	 	// askUserForWord();
-	 	// setWordGuessed();
+	while(userList->isOneUser()); 
 
-	// 	bool gameOver = false;
-	// 	lettersGuessed.clear();
-	// 	incorrectLettersGuessed.clear();
-	// 	User *guesser = userList;
-	// 	numIncorrectGuesses = 0;
+
+ 	userList->setNewChooser();
+ 	wordUnguessed = userList->getWordFromChooser();
+ 	setWordGuessed();
+	bool gameOver = false;
+	lettersGuessed.clear();
+	incorrectLettersGuessed.clear();
+	osproj::User *guesser = userList->getGuesser();
+
+	numIncorrectGuesses = 0;
 		
 	// 	while (!gameOver) {
 	// 		guesser = guesser->next;
@@ -130,33 +129,13 @@ void *playGame(void *placeholder) {
 	pthread_exit(0);
 }
 
-void askUserForWord() {
-	// chooser is global var
-
-	/*send "Enter a word for the guessors to guess: "
-	wordUnguessed = libreadline
-
-	error checking
-	must not contain $
-	no spaces? would be easier. could change later.
-	*/
-	
-	// int sock = chooser->clientFD;
-	// wordGuessed = sockreadline(sock);
-}
-
 void setWordGuessed() {
 	// Builds a string of correct length filled with $s.
-	for(unsigned int i =0; i < wordGuessed.length(); i++) {
-		wordUnguessed+="$";
-	}
-	cout << "Word: " << wordGuessed << "Hidden Word: " << wordUnguessed << endl;
-}
 
-char askUserForLetter() {
-	// send to guessor "please enter a character to guess"
-	// error check
-	return 'a';
+	for(unsigned int i =0; i < wordUnguessed.length(); i++) {
+		wordGuessed+="$";
+	}
+	cout << "Word: " << wordUnguessed << " Hidden Word: " << wordGuessed << endl;
 }
 
 bool checkIfLetterIsInWord(char letter) {

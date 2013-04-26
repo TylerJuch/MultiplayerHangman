@@ -1,6 +1,7 @@
 #ifndef OSPROJ_USERS_H
 #define OSPROJ_USERS_H
 
+#include <string>
 
 namespace osproj
 {
@@ -23,10 +24,15 @@ namespace osproj
 			~Users();
 			void addUser(int clientFD);
 			bool isOneUser();
+			void setNewChooser();
+			std::string getWordFromChooser();
+			char getLetterFromGuesser();
+			User *getGuesser();
 
 		private:
 			User *userList;
-			void setNewChooser(User *newChooser);
+			User *chooser;
+			int numOfUsers;
 			void addNewUserToUserList(int clientFD);
 			void removeUserFromList(int clientFD);
 	};

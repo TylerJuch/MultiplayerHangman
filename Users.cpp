@@ -6,16 +6,23 @@
 #include <stdlib.h>
 #include <stdio.h>
 
+//constructor/destructor
 osproj::Users::Users()
 {
 	this->userList = NULL;
+	this->chooser = NULL;
+	this->numOfUsers = 0;
 }
 
 osproj::Users::~Users()
 {
 	delete this->userList;
+	delete this->chooser;
 }
 
+///////////////////////////////////////////
+//Public Methods
+///////////////////////////////////////////
 void osproj::Users::addUser(int clientFD)
 {
 	this->addNewUserToUserList(clientFD);
@@ -23,19 +30,51 @@ void osproj::Users::addUser(int clientFD)
 
 bool osproj::Users::isOneUser()
 {
-	return this->userList->next == this->userList;
+	return this->numOfUsers == 1; 
 }
 
+void osproj::Users::setNewChooser() 
+{
+	std::cout << "Setting new user..." << std::endl;
+	this->chooser->status = GUESSER;
+	this->userList->status = CHOOSER;
+	this->chooser = this->userList;
+	std::cout << "User " << this->chooser->clientFD << " is now the chooser" << std::endl;
+}
 
-// void osproj::setNewChooser(User *newChooser) 
-// {
-// 	chooser->status = GUESSER;
-// 	newChooser->status = CHOOSER;
-// 	chooser = newChooser;
-// 	cout << "User " << chooser->clientFD << " is now the chooser" << endl;
-// }
+std::string osproj::Users::getWordFromChooser() 
+{
+	// chooser is global var
 
-void osproj::Users::addNewUserToUserList(int clientFD) {
+	/*send "Enter a word for the guessors to guess: "
+	wordUnguessed = libreadline
+
+	error checking
+	must not contain $
+	no spaces? would be easier. could change later.
+	*/
+	
+	// int sock = chooser->clientFD;
+	// wordGuessed = sockreadline(sock);
+	return "cake";
+}
+
+char osproj::Users::getLetterFromGuesser()
+{
+	return 'a';
+}
+
+osproj::User* osproj::Users::getGuesser()
+{
+	if(this->userList->status == GUESSER) return this->userList;
+	else return this->userList->next;
+}
+
+///////////////////////////////////////////
+//Private Methods
+///////////////////////////////////////////
+void osproj::Users::addNewUserToUserList(int clientFD) 
+{
 	User *newUser = (User*)malloc(sizeof(User));
 	newUser->status = GUESSER;
 	newUser->clientFD = clientFD;
@@ -43,6 +82,8 @@ void osproj::Users::addNewUserToUserList(int clientFD) {
 
 	if(this->userList == NULL) {
 		newUser->next = newUser;
+		newUser->status = CHOOSER;
+		chooser = newUser;
 		this->userList = newUser;
 	}
 	else {
@@ -51,6 +92,8 @@ void osproj::Users::addNewUserToUserList(int clientFD) {
 		while((curPtr->next)->clientFD != headId) curPtr = curPtr->next;
 		curPtr->next = newUser;
 	}
+	this->numOfUsers++;
+	std::cout << "Client Connected" << std::endl;
 }
 
 // void removeUserFromList(int clientFD) 
@@ -69,4 +112,5 @@ void osproj::Users::addNewUserToUserList(int clientFD) {
 // 		curPtr->next = (curPtr->next)->next;
 // 		free(temp);
 // 	}
+//	this->numOfUsers--;
 // }
