@@ -1,5 +1,3 @@
-
-
 all: server users
 
 test: server
