@@ -97,7 +97,6 @@ void *playGame(void *placeholder) {
 	// while(true) {
 	while(userList->isOneUser()); 
 
-
  	userList->setNewChooser();
  	wordUnguessed = userList->getWordFromChooser();
  	setWordGuessed();
