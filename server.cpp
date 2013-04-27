@@ -11,6 +11,8 @@
 #include <unistd.h>
 #include "Users.hpp"
 #include "sockhelper.hpp"
+#include <algorithm>
+#include <sstream>
 
 using namespace std;
 
@@ -87,61 +89,79 @@ int main() {
         if(userList->isOneUser()) pthread_create(&gameLoopThread, NULL, playGame, NULL);
     } /* end of while */
 	
-	//playGame();
 	return 0;
 }
 
 void *playGame(void *placeholder) {
 	// Need to check and see if users are still connected in there at some point? Maybe often?
+	int winningUserFD = -1;
+	while(true) {
+		if(userList->isOneUser()) userList->sendMessageToAllClients("Waiting for another player...\n");
+		while(userList->isOneUser());
+		userList->sendMessageToAllClients("Enough players found!\n");
 
-	// while(true) {
-	while(userList->isOneUser()); 
+	 	userList->setNewChooser(winningUserFD);
+	 	wordUnguessed = userList->getWordFromChooser();
+	 	setWordGuessed();
+		bool gameOver = false;
+		lettersGuessed.clear();
+		incorrectLettersGuessed.clear();
+		osproj::User *guesser = userList->getGuesser();
 
- 	userList->setNewChooser();
- 	wordUnguessed = userList->getWordFromChooser();
- 	setWordGuessed();
-	bool gameOver = false;
-	lettersGuessed.clear();
-	incorrectLettersGuessed.clear();
-	osproj::User *guesser = userList->getGuesser();
+		numIncorrectGuesses = 0;
 
-	numIncorrectGuesses = 0;
+	 	while (!gameOver) {
+	 		guesser = guesser->next;
+	 		if (guesser->status == 0) guesser = guesser->next;		//Prevent guesser from ever being chooser;
+	 		userList->sendMessageToAllClients("A new user has been selected to guess a letter.\n");
 
-		
-	// 	while (!gameOver) {
-	// 		guesser = guesser->next;
-	// 		if (guesser->status == CHOOSER) guesser = guesser->next;		//Prevent guesser from ever being chooser;
+	 		char guess;
+	 		do {
+	 			guess = userList->getLetterFromGuesser(guesser->clientFD);
+	 			if(find(lettersGuessed.begin(), lettersGuessed.end(), guess) != lettersGuessed.end()) {
+	 				userList->writeToSocket(guesser->clientFD, "That letter has already been guessed\n");
+	 			}
+	 		} while(find(lettersGuessed.begin(), lettersGuessed.end(), guess) != lettersGuessed.end());
+	 		lettersGuessed.push_back(guess);
 
-	// 		char guess = askUserForLetter(guesser);
-	// 		if (checkIfLetterIsInWord(guess) == false){
-	// 			numIncorrectGuesses++;
+	 		if (checkIfLetterIsInWord(guess) == false){
+	 			numIncorrectGuesses++;
+	 			incorrectLettersGuessed.push_back(guess);
+	 		}
 
-	// 			incorrectLettersGuessed.push_back(guess);
-	// 		} 
-	// 		// push letter to letters guessed
-	// 		lettersGuessed.push_back(guess);
-	// 		gameOver = checkIfGameOver();
+	 		cout << "Word: " << wordUnguessed <<endl << "Hidden Word: " << wordGuessed << endl;
+
+	 		gameOver = checkIfGameOver();
+	 		if(numIncorrectGuesses == 5) {
+	 			userList->sendMessageToAllClients("That's five wrong guesses! The guessors lose! The chooser wins!");
+	 			gameOver = true;
+	 			winningUserFD = userList->getChooserFD();	//This line may not be necessary, but oh well.
+
+	 		}
+
 	// 		updateClientScreens();
-	// 		if (gameOver) winningUser = guesser;
-	// 	}
-	// }
+	 		if (gameOver) winningUserFD = guesser->clientFD;
+	 	}
+	}
 	cout << "Leaving Game Loop" << endl;
 	pthread_exit(0);
 }
 
 void setWordGuessed() {
 	// Builds a string of correct length filled with $s.
+	wordGuessed="";
 
 	for(unsigned int i =0; i < wordUnguessed.length(); i++) {
 		wordGuessed+="$";
 	}
-	cout << "Word: " << wordUnguessed << " Hidden Word: " << wordGuessed << endl;
+	cout << "Word: " << wordUnguessed <<endl << "Hidden Word: " << wordGuessed << endl;
 }
 
 bool checkIfLetterIsInWord(char letter) {
 	bool foundInWord = false;
 
 	int position = wordUnguessed.find(letter);
+	cout<<"Found "<<letter<<endl;
 	while(position != -1) {
 		foundInWord = true;
 
@@ -151,6 +171,17 @@ bool checkIfLetterIsInWord(char letter) {
 		position = wordUnguessed.find(letter);
 	}
 
+	std::stringstream ss;
+	ss << "User guessed "<<letter<<".\n";
+	userList->sendMessageToAllClients(ss.str());
+
+	ss.str(std::string());
+	if(!foundInWord) {	
+		ss<<"The letter "<<letter<<" was not found in the word.\n";
+	} else {
+		ss<<"The letter "<<letter<<" was found in the word.\n";
+	}
+	userList->sendMessageToAllClients(ss.str());
 	return foundInWord;
 }
 
@@ -166,6 +197,6 @@ bool checkIfGameOver() {
 	//		i.e. All $ have been removed from wordGuesses
 	//			i.e. All letters have been revealed to the players
 	// Returns false otherwies
-	//return (wordGuessed.find('$') == -1);
-	return false;
+	int position = wordGuessed.find('$');
+	return (position == -1);
 }

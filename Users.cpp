@@ -33,12 +33,20 @@ bool osproj::Users::isOneUser()
 	return this->numOfUsers == 1; 
 }
 
-void osproj::Users::setNewChooser() 
+void osproj::Users::setNewChooser(int winningUserFD) 
 {
-	std::cout << "Setting new user..." << std::endl;
+	std::cout << "Setting new user...\n";
 	this->chooser->status = GUESSER;
-	this->userList->status = CHOOSER;
-	this->chooser = this->userList;
+
+	if(winningUserFD == -1) {
+		this->userList->status = CHOOSER;
+		this->chooser = this->userList;
+	} else {
+		User *curPtr = this->userList;
+		while(curPtr->clientFD != winningUserFD) curPtr = curPtr->next;
+		curPtr->status = CHOOSER;
+		this->chooser = curPtr;
+	}
 	std::cout << "User " << this->chooser->clientFD << " is now the chooser" << std::endl;
 }
 
@@ -50,23 +58,21 @@ int osproj::Users::getChooserFD()
 std::string osproj::Users::getWordFromChooser() 
 {
 	// chooser is global var
+	writeToSocket((this->chooser)->clientFD, "Enter a word for the guessors to guess: ");
+	std::string word = readFromSocket((this->chooser)->clientFD);
+	return word.substr(0, word.length()-2);
 
-	/*send "Enter a word for the guessors to guess: "
-	wordUnguessed = libreadline
-
-	error checking
+	/*error checking
 	must not contain $
 	no spaces? would be easier. could change later.
 	*/
-	
-	// int sock = chooser->clientFD;
-	// wordGuessed = sockreadline(sock);
-	return "cake";
 }
 
-char osproj::Users::getLetterFromGuesser()
+char osproj::Users::getLetterFromGuesser(int clientFD)
 {
-	return 'a';
+	writeToSocket(clientFD, "Enter a letter to guess: ");
+	std::string word = readFromSocket(clientFD);
+	return word.at(0);
 }
 
 osproj::User* osproj::Users::getGuesser()
@@ -78,10 +84,24 @@ osproj::User* osproj::Users::getGuesser()
 void osproj::Users::writeToSocket(int clientFD, std::string text)
 {
 	//Based off of this: http://www.cplusplus.com/forum/unices/31692/
-	std::string textWithNewLine = text.append("\n");
-	write(clientFD, textWithNewLine.c_str(), textWithNewLine.length());
+	write(clientFD, text.c_str(), text.length());
 }
 
+std::string osproj::Users::readFromSocket(int clientFD)
+{
+	char buf[1024];
+	read(clientFD, buf, sizeof(buf));
+	return buf;
+}
+
+void osproj::Users::sendMessageToAllClients(std::string message)
+{
+	User *curPtr = this->userList;
+	do {
+		writeToSocket(curPtr->clientFD, message);
+		curPtr = curPtr->next;
+	} while(curPtr!=NULL && curPtr->clientFD != this->userList->clientFD);
+}
 ///////////////////////////////////////////
 //Private Methods
 ///////////////////////////////////////////
