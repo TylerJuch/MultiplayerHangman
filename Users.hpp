@@ -28,6 +28,8 @@ namespace osproj
 			std::string getWordFromChooser();
 			char getLetterFromGuesser();
 			User *getGuesser();
+			void writeToSocket(int clientFD, std::string text);
+			int getChooserFD();
 
 		private:
 			User *userList;

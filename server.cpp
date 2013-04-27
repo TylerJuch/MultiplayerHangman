@@ -106,6 +106,7 @@ void *playGame(void *placeholder) {
 	osproj::User *guesser = userList->getGuesser();
 
 	numIncorrectGuesses = 0;
+
 		
 	// 	while (!gameOver) {
 	// 		guesser = guesser->next;

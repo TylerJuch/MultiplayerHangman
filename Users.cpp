@@ -42,6 +42,11 @@ void osproj::Users::setNewChooser()
 	std::cout << "User " << this->chooser->clientFD << " is now the chooser" << std::endl;
 }
 
+int osproj::Users::getChooserFD()
+{
+	return (this->chooser)->clientFD;
+}
+
 std::string osproj::Users::getWordFromChooser() 
 {
 	// chooser is global var
@@ -70,6 +75,13 @@ osproj::User* osproj::Users::getGuesser()
 	else return this->userList->next;
 }
 
+void osproj::Users::writeToSocket(int clientFD, std::string text)
+{
+	//Based off of this: http://www.cplusplus.com/forum/unices/31692/
+	std::string textWithNewLine = text.append("\n");
+	write(clientFD, textWithNewLine.c_str(), textWithNewLine.length());
+}
+
 ///////////////////////////////////////////
 //Private Methods
 ///////////////////////////////////////////
@@ -95,6 +107,8 @@ void osproj::Users::addNewUserToUserList(int clientFD)
 	this->numOfUsers++;
 	std::cout << "Client Connected" << std::endl;
 }
+
+
 
 // void removeUserFromList(int clientFD) 
 // {
