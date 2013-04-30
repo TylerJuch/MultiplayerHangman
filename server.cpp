@@ -27,6 +27,8 @@ static pthread_mutex_t userListMutex = PTHREAD_MUTEX_INITIALIZER;
 int numIncorrectGuesses;
 vector<char> lettersGuessed;
 vector<char> incorrectLettersGuessed;
+vector<char> illegalSymbols(4);
+
 osproj::Users *userList = new osproj::Users();
 /* This is going to make it easy to keep track of
  * the letters if there are duplicates in a word
@@ -43,6 +45,13 @@ string wordUnguessed;
 string wordGuessed;
 
 int main() {
+ 	// This is gross, but the quick ways didn't work and I don't feel like looking for a better solution
+ 	illegalSymbols.push_back(' ');
+ 	illegalSymbols.push_back('!');
+ 	illegalSymbols.push_back('?');
+ 	illegalSymbols.push_back(',');
+ 	illegalSymbols.push_back(' ');
+
 	//Handle user connection crap
 	int sockfd, newsockfd, portno, clilen;
     //char buffer[256];
@@ -108,25 +117,44 @@ void *playGame(void *placeholder) {
 		incorrectLettersGuessed.clear();
 		osproj::User *guesser = userList->getGuesser();
 
+		bool userWasCorrect = false;
 		numIncorrectGuesses = 0;
 
 	 	while (!gameOver) {
-	 		guesser = guesser->next;
-	 		if (guesser->status == 0) guesser = guesser->next;		//Prevent guesser from ever being chooser;
-	 		userList->sendMessageToAllClients("A new user has been selected to guess a letter.\n");
+	 		if(!userWasCorrect){
+		 		guesser = guesser->next;
+		 		if (guesser->status == 0) guesser = guesser->next;		//Prevent guesser from ever being chooser;
+		 		userList->sendMessageToAllClients("A new user has been selected to guess a letter.\n");
+	 		}
+	 		else {
+	 			userList->sendMessageToAllClients("Current guessor gets to guess again.\n");
+	 		}
+	 		userWasCorrect = false;
 
 	 		char guess;
+	 		bool alreadyGussed = false;
+	 		bool gussedIllegalSymbol = false;
 	 		do {
+	 			alreadyGussed = false;
+	 			gussedIllegalSymbol = false;
 	 			guess = userList->getLetterFromGuesser(guesser->clientFD);
 	 			if(find(lettersGuessed.begin(), lettersGuessed.end(), guess) != lettersGuessed.end()) {
-	 				userList->writeToSocket(guesser->clientFD, "That letter has already been guessed\n");
+	 				userList->writeToSocket(guesser->clientFD, "That letter has already been guessed.\n");
+	 				alreadyGussed = true;
 	 			}
-	 		} while(find(lettersGuessed.begin(), lettersGuessed.end(), guess) != lettersGuessed.end());
+	 			else if(find(illegalSymbols.begin(), illegalSymbols.end(), guess) != illegalSymbols.end()) {
+	 				userList->writeToSocket(guesser->clientFD, "You cannot guess that symbol.\n");
+	 				gussedIllegalSymbol = true;
+	 			}
+	 		} while(alreadyGussed || gussedIllegalSymbol);
 	 		lettersGuessed.push_back(guess);
 
 	 		if (checkIfLetterIsInWord(guess) == false){
 	 			numIncorrectGuesses++;
 	 			incorrectLettersGuessed.push_back(guess);
+	 		}
+	 		else {
+	 			userWasCorrect = true;
 	 		}
 
 	 		cout << "Word: " << wordUnguessed <<endl << "Hidden Word: " << wordGuessed << endl;
@@ -152,7 +180,10 @@ void setWordGuessed() {
 	wordGuessed="";
 
 	for(unsigned int i =0; i < wordUnguessed.length(); i++) {
-		wordGuessed+="$";
+		if ( wordUnguessed.at(i) == ' ')
+			wordGuessed+=" ";
+		else
+			wordGuessed+="$";
 	}
 	cout << "Word: " << wordUnguessed <<endl << "Hidden Word: " << wordGuessed << endl;
 }
