@@ -93,13 +93,17 @@ char osproj::Users::getLetterFromGuesser()
 		
 		//This waits for one of the threads to finish
 		pthread_join(timerThread, NULL);
-		User *temp = this->currentGuesser;
-		setNextGuesser();
-		removeUserFromList(temp->clientFD);
 
-		if (isOneUser()) {
-			std::cout<<"Only one user!"<<std::endl;
-			exit(0);
+
+		if (!fromInput) {
+			User *temp = this->currentGuesser;
+			setNextGuesser();
+			removeUserFromList(temp->clientFD);
+
+			if (isOneUser()) {
+				std::cout<<"Only one user!"<<std::endl;
+				exit(0);
+			}
 		}
 	} while(!fromInput);
 
@@ -237,7 +241,6 @@ void* osproj::Users::getGuess(void* arg) {
 	std::string word = u.readFromSocket(targetFD);
 
 	guess = word.at(0);
-	fromInput = true;
 	pthread_mutex_lock(&mutex);
 	pthread_cond_signal(&cond);
 	pthread_mutex_unlock(&mutex);
@@ -250,20 +253,19 @@ void* osproj::Users::timedWait(void* arg) {
 	
 	struct timespec timeToWait;
   	struct timeval now;
-	int timeInMs = 10000;
+	int timeInSec = 10;
 
 	gettimeofday(&now,NULL);
 
 
-	timeToWait.tv_sec = now.tv_sec+5;
-	timeToWait.tv_nsec = (now.tv_usec+1000UL*timeInMs)*1000UL;
+	timeToWait.tv_sec = now.tv_sec+timeInSec;
 
 	pthread_mutex_lock(&mutex);
-	int rc = pthread_cond_timedwait(&cond, &mutex, &timeToWait); //You should look up that third arg to see how I am using it wrong
+	int rc = pthread_cond_timedwait(&cond, &mutex, &timeToWait);
 	pthread_mutex_unlock(&mutex);
 
 	if (rc != 0) {
-		std::cout<<"User timed out."<<std::endl;
+		std::cout<<"User timed out. rc:"<<rc<<std::endl;
 		fromInput = false;
 	}
 	else {
