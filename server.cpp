@@ -13,6 +13,7 @@
 #include "sockhelper.hpp"
 #include <algorithm>
 #include <sstream>
+#include "Timing.hpp"
 
 using namespace std;
 
@@ -21,9 +22,9 @@ bool checkIfUserIsStillConnected(int clientFD);
 void setWordGuessed();
 void updateClientScreens();
 void *playGame(void *);
-bool checkIfGameOver();
+bool gameIsOver();
 
-static pthread_mutex_t userListMutex = PTHREAD_MUTEX_INITIALIZER;
+//static pthread_mutex_t userListMutex = PTHREAD_MUTEX_INITIALIZER;
 int numIncorrectGuesses;
 vector<char> lettersGuessed;
 vector<char> incorrectLettersGuessed;
@@ -51,6 +52,7 @@ int main() {
  	illegalSymbols.push_back('?');
  	illegalSymbols.push_back(',');
  	illegalSymbols.push_back(' ');
+ 	illegalSymbols.push_back('$');
 
 	//Handle user connection crap
 	int sockfd, newsockfd, portno, clilen;
@@ -110,6 +112,7 @@ void *playGame(void *placeholder) {
 		userList->sendMessageToAllClients("Enough players found!\n");
 
 	 	userList->setNewChooser(winningUserFD);
+	 	if (winningUserFD == -1) userList->setCurrentGuesser(userList->getChooser()->next);
 	 	wordUnguessed = userList->getWordFromChooser();
 	 	setWordGuessed();
 		bool gameOver = false;
@@ -122,31 +125,29 @@ void *playGame(void *placeholder) {
 
 	 	while (!gameOver) {
 	 		if(!userWasCorrect){
-		 		guesser = guesser->next;
-		 		if (guesser->status == 0) guesser = guesser->next;		//Prevent guesser from ever being chooser;
-		 		userList->sendMessageToAllClients("A new user has been selected to guess a letter.\n");
+	 			userList->setNextGuesser();
 	 		}
 	 		else {
-	 			userList->sendMessageToAllClients("Current guessor gets to guess again.\n");
+	 			userList->sendMessageToAllClients("Current guesser gets to guess again.\n");
 	 		}
 	 		userWasCorrect = false;
 
 	 		char guess;
-	 		bool alreadyGussed = false;
-	 		bool gussedIllegalSymbol = false;
+	 		bool alreadyGuessed = false;
+	 		bool guessedIllegalSymbol = false;
 	 		do {
-	 			alreadyGussed = false;
-	 			gussedIllegalSymbol = false;
-	 			guess = userList->getLetterFromGuesser(guesser->clientFD);
+	 			alreadyGuessed = false;
+	 			guessedIllegalSymbol = false;
+	 			guess = userList->getLetterFromGuesser();
 	 			if(find(lettersGuessed.begin(), lettersGuessed.end(), guess) != lettersGuessed.end()) {
 	 				userList->writeToSocket(guesser->clientFD, "That letter has already been guessed.\n");
-	 				alreadyGussed = true;
+	 				alreadyGuessed = true;
 	 			}
 	 			else if(find(illegalSymbols.begin(), illegalSymbols.end(), guess) != illegalSymbols.end()) {
-	 				userList->writeToSocket(guesser->clientFD, "You cannot guess that symbol.\n");
-	 				gussedIllegalSymbol = true;
+	 				userList->writeToSocket(userList->getCurrentGuesser()->clientFD, "You cannot guess that symbol.\n");
+	 				guessedIllegalSymbol = true; 
 	 			}
-	 		} while(alreadyGussed || gussedIllegalSymbol);
+	 		} while(alreadyGuessed || guessedIllegalSymbol);
 	 		lettersGuessed.push_back(guess);
 
 	 		if (checkIfLetterIsInWord(guess) == false){
@@ -159,16 +160,16 @@ void *playGame(void *placeholder) {
 
 	 		cout << "Word: " << wordUnguessed <<endl << "Hidden Word: " << wordGuessed << endl;
 
-	 		gameOver = checkIfGameOver();
+	 		gameOver = gameIsOver();
 	 		if(numIncorrectGuesses == 5) {
-	 			userList->sendMessageToAllClients("That's five wrong guesses! The guessors lose! The chooser wins!");
+	 			userList->sendMessageToAllClients("That's five wrong guesses! The guessors lose! The chooser wins!\n");
 	 			gameOver = true;
-	 			winningUserFD = userList->getChooserFD();	//This line may not be necessary, but oh well.
+	 			winningUserFD = userList->getChooser()->clientFD;	//This line may not be necessary, but oh well.
 
 	 		}
 
 	// 		updateClientScreens();
-	 		if (gameOver) winningUserFD = guesser->clientFD;
+	 		if (gameOver) winningUserFD = userList->getChooser()->clientFD;
 	 	}
 	}
 	cout << "Leaving Game Loop" << endl;
@@ -223,11 +224,7 @@ void updateClientScreens() {
 	return;
 }
 
-bool checkIfGameOver() {
+bool gameIsOver() {
 	// Returns true is game is over
-	//		i.e. All $ have been removed from wordGuesses
-	//			i.e. All letters have been revealed to the players
-	// Returns false otherwies
-	int position = wordGuessed.find('$');
-	return (position == -1);
+	return (wordGuessed.find('$') == string::npos);
 }
