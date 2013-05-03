@@ -37,49 +37,37 @@ void osproj::Users::addUser(int clientFD)
 	// Adds a new user with given clientFD to list by calling private method
 	this->addNewUserToUserList(clientFD);
 }
-
-void osproj::Users::removeUser(int clientFD)
-{
-	// Removes user with given clientFD from list by calling private method
-	this->removeUserFromList(clientFD);
-}
-
-bool osproj::Users::isOneUser()
-{
-	// Returns true if there is only one user currently connectesd
-	return this->numOfUsers == 1; 
-}
-
-void osproj::Users::setNewChooser(int winningUserFD) 
-{
-	// Sets old chooser to guessor
-	// Sets winning user of last round with given clientFD to new chooser
-	this->chooser->status = GUESSER;
-
-	if(winningUserFD == -1) {
-		this->userList->status = CHOOSER;
-		this->chooser = this->userList;
-	} else {
-		User *curPtr = this->userList;
-		while(curPtr->clientFD != winningUserFD) curPtr = curPtr->next;
-		curPtr->status = CHOOSER;
-		this->chooser = curPtr;
-	}
-}
-
 osproj::User* osproj::Users::getChooser()
 {
 	// Returns the current chooser
 	return (this->chooser);
 }
 
-std::string osproj::Users::getWordFromChooser() 
-{
-	// Returns the word chosen by the chooser
-	writeToSocket((this->chooser)->clientFD, "Enter a word for the guessors to guess: ");
-	std::string word = readFromSocket((this->chooser)->clientFD);
-	return word.substr(0, word.length()-2);
+osproj::User* osproj::Users::getCurrentGuesser() {
+	return (this->currentGuesser);
 }
+
+void* osproj::Users::getGuess(void* arg) {
+	// This is ugly, I know
+	// Refactor if you want
+	// That malloc crap was annoying
+	int targetFD = *(int *)arg;
+	Users u;
+	u.writeToSocket(targetFD, "Enter a letter to guess: ");
+	std::string word = u.readFromSocket(targetFD);
+
+	guess = word.at(0);
+	pthread_mutex_lock(&mutex);
+	pthread_cond_signal(&cond);
+	pthread_mutex_unlock(&mutex);
+	pthread_exit(0);
+}
+osproj::User* osproj::Users::getGuesser()
+{
+	// Returns first eligible guessor in user list
+	return (this->userList->status == GUESSER) ? this->userList : this->userList->next;
+}
+
 
 char osproj::Users::getLetterFromGuesser()
 {
@@ -110,16 +98,18 @@ char osproj::Users::getLetterFromGuesser()
 	return guess;
 }
 
-osproj::User* osproj::Users::getGuesser()
+std::string osproj::Users::getWordFromChooser() 
 {
-	// Returns first eligible guessor in user list
-	return (this->userList->status == GUESSER) ? this->userList : this->userList->next;
+	// Returns the word chosen by the chooser
+	writeToSocket((this->chooser)->clientFD, "Enter a word for the guessors to guess: ");
+	std::string word = readFromSocket((this->chooser)->clientFD);
+	return word.substr(0, word.length()-2);
 }
 
-void osproj::Users::writeToSocket(int clientFD, std::string text)
+bool osproj::Users::isOneUser()
 {
-	// Writes text to client with given clientFD
-	write(clientFD, text.c_str(), text.length());
+	// Returns true if there is only one user currently connectesd
+	return this->numOfUsers == 1; 
 }
 
 std::string osproj::Users::readFromSocket(int clientFD)
@@ -128,6 +118,12 @@ std::string osproj::Users::readFromSocket(int clientFD)
 	char buf[1024];
 	read(clientFD, buf, sizeof(buf));
 	return buf;
+}
+
+void osproj::Users::removeUser(int clientFD)
+{
+	// Removes user with given clientFD from list by calling private method
+	this->removeUserFromList(clientFD);
 }
 
 void osproj::Users::sendMessageToAllClients(std::string message)
@@ -140,6 +136,61 @@ void osproj::Users::sendMessageToAllClients(std::string message)
 	} while(curPtr!=NULL && curPtr->clientFD != this->userList->clientFD);
 }
 
+void osproj::Users::setCurrentGuesser(User *newGuesser) {
+	this->currentGuesser = newGuesser;
+}
+
+void osproj::Users::setNewChooser(int winningUserFD) 
+{
+	// Sets old chooser to guessor
+	// Sets winning user of last round with given clientFD to new chooser
+	this->chooser->status = GUESSER;
+
+	if(winningUserFD == -1) {
+		this->userList->status = CHOOSER;
+		this->chooser = this->userList;
+	} else {
+		User *curPtr = this->userList;
+		while(curPtr->clientFD != winningUserFD) curPtr = curPtr->next;
+		curPtr->status = CHOOSER;
+		this->chooser = curPtr;
+	}
+}
+
+void osproj::Users::setNextGuesser() {
+	this->currentGuesser = this->currentGuesser->next;
+	if (this->currentGuesser->status == CHOOSER) this->currentGuesser = this->currentGuesser->next;
+	sendMessageToAllClients("A new user has been selected to guess a letter.\n");
+}
+
+void* osproj::Users::timedWait(void* arg) {
+	std::cout<<"In timer function"<<std::endl;
+	
+	struct timespec timeToWait;
+  	struct timeval now;
+	int timeInSec = 10;
+
+	gettimeofday(&now,NULL);
+
+
+	timeToWait.tv_sec = now.tv_sec+timeInSec;
+
+	pthread_mutex_lock(&mutex);
+	int rc = pthread_cond_timedwait(&cond, &mutex, &timeToWait);
+	pthread_mutex_unlock(&mutex);
+
+	if (rc != 0) {
+		std::cout<<"User timed out. rc:"<<rc<<std::endl;
+		fromInput = false;
+	}
+	else {
+		fromInput = true;
+	}
+
+
+	pthread_exit(0);
+}
+
 bool osproj::Users::userIsActive(int clientFD) {
 	// Returns true if user is active
 	int result = write(clientFD, "", 0);
@@ -149,19 +200,12 @@ bool osproj::Users::userIsActive(int clientFD) {
 	return true;
 }
 
-void osproj::Users::setNextGuesser() {
-	this->currentGuesser = this->currentGuesser->next;
-	if (this->currentGuesser->status == CHOOSER) this->currentGuesser = this->currentGuesser->next;
-	sendMessageToAllClients("A new user has been selected to guess a letter.\n");
+void osproj::Users::writeToSocket(int clientFD, std::string text)
+{
+	// Writes text to client with given clientFD
+	write(clientFD, text.c_str(), text.length());
 }
 
-osproj::User* osproj::Users::getCurrentGuesser() {
-	return (this->currentGuesser);
-}
-
-void osproj::Users::setCurrentGuesser(User *newGuesser) {
-	this->currentGuesser = newGuesser;
-}
 
 ///////////////////////////////////////////
 //Private Methods
@@ -231,47 +275,6 @@ void osproj::Users::removeUserFromList(int clientFD) {
 	this->numOfUsers--;
 }
 
-void* osproj::Users::getGuess(void* arg) {
-	// This is ugly, I know
-	// Refactor if you want
-	// That malloc crap was annoying
-	int targetFD = *(int *)arg;
-	Users u;
-	u.writeToSocket(targetFD, "Enter a letter to guess: ");
-	std::string word = u.readFromSocket(targetFD);
-
-	guess = word.at(0);
-	pthread_mutex_lock(&mutex);
-	pthread_cond_signal(&cond);
-	pthread_mutex_unlock(&mutex);
-	pthread_exit(0);
-}
 
 
-void* osproj::Users::timedWait(void* arg) {
-	std::cout<<"In timer function"<<std::endl;
-	
-	struct timespec timeToWait;
-  	struct timeval now;
-	int timeInSec = 10;
 
-	gettimeofday(&now,NULL);
-
-
-	timeToWait.tv_sec = now.tv_sec+timeInSec;
-
-	pthread_mutex_lock(&mutex);
-	int rc = pthread_cond_timedwait(&cond, &mutex, &timeToWait);
-	pthread_mutex_unlock(&mutex);
-
-	if (rc != 0) {
-		std::cout<<"User timed out. rc:"<<rc<<std::endl;
-		fromInput = false;
-	}
-	else {
-		fromInput = true;
-	}
-
-
-	pthread_exit(0);
-}

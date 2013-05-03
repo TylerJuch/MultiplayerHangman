@@ -22,29 +22,31 @@ namespace osproj
 		public:
 			Users();
 			~Users();
-			void addUser(int clientFD);
-			void removeUser(int clientFD);
-			bool isOneUser();
-			void setNewChooser(int clientFD);
-			std::string getWordFromChooser(	);
-			char getLetterFromGuesser();
-			User* getGuesser();
-			void writeToSocket(int clientFD, std::string text);
-			std::string readFromSocket(int clientFD);
+			
+			void addUser(int clientFD);			
 			User* getChooser();
-			void sendMessageToAllClients(std::string message);
-			bool userIsActive(int clientFD);
-			static void *getGuess(void* arg);
-			static void *timedWait(void* arg);
-			void setNextGuesser();
 			User* getCurrentGuesser();
+			static void *getGuess(void* arg);
+			User* getGuesser();
+			char getLetterFromGuesser();
+			std::string getWordFromChooser(	);
+			bool isOneUser();
+			std::string readFromSocket(int clientFD);
+			void removeUser(int clientFD);
+			void sendMessageToAllClients(std::string message);
 			void setCurrentGuesser(User *newGuesser);
-
+			void setNewChooser(int clientFD);
+			void setNextGuesser();
+			static void *timedWait(void* arg);
+			bool userIsActive(int clientFD);
+			void writeToSocket(int clientFD, std::string text);
+			
+			
 		private:
-			User *userList;
 			User *chooser;
 			User *currentGuesser;
 			int numOfUsers;
+			User *userList;
 			void addNewUserToUserList(int clientFD);
 			void removeUserFromList(int clientFD);
 			
