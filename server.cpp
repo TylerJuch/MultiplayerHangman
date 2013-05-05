@@ -14,6 +14,8 @@
 #include <algorithm>
 #include <sstream>
 #include "Timing.hpp"
+#include <ncurses.h>
+
 
 using namespace std;
 
@@ -168,7 +170,7 @@ void *playGame(void *placeholder) {
 
 	 		}
 
-	// 		updateClientScreens();
+	 		updateClientScreens();
 	 		if (gameOver) winningUserFD = userList->getChooser()->clientFD;
 	 	}
 	}
@@ -220,7 +222,21 @@ bool checkIfLetterIsInWord(char letter) {
 void updateClientScreens() {
 	// Encurses magic here to all the users
 	// You should use all of the global variables
-
+	
+	// initscr();			/* Start curses mode 		  */
+	// printw("Hello World !!!");	/* Print Hello World		  */
+	// refresh();			/* Print it on to the real screen */
+	// getch();			/* Wait for user input */
+	// endwin();			/* End curses mode		  */
+	
+	std::string wrongGuesses = "";
+	
+	for(unsigned int i =0; i < incorrectLettersGuessed.size(); i++) {
+		wrongGuesses.push_back(incorrectLettersGuessed.at(i));
+		wrongGuesses += " | ";
+	}
+	
+	userList->updateAllClientsScreen(incorrectLettersGuessed.size(), wordGuessed, wrongGuesses);
 	return;
 }
 

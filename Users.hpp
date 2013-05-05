@@ -38,6 +38,7 @@ namespace osproj
 			void setNewChooser(int clientFD);
 			void setNextGuesser();
 			static void *timedWait(void* arg);
+			void updateAllClientsScreen(int numWrong, std::string wordGuessed, std::string wrongGuesses);
 			bool userIsActive(int clientFD);
 			void writeToSocket(int clientFD, std::string text);
 			

@@ -3,7 +3,7 @@ MultiplayerHangman
 
 Group project
 ----------
-To compile: g++ server.cpp
+To compile: g++ *.cpp -lncurses
 
 Server runs on port 5001
 

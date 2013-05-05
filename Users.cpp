@@ -9,6 +9,7 @@
 #include <time.h>
 #include <pthread.h>
 #include <sys/time.h>
+#include <ncurses.h>
 
 pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
 pthread_cond_t cond = PTHREAD_COND_INITIALIZER;
@@ -191,6 +192,55 @@ void* osproj::Users::timedWait(void* arg) {
 	pthread_exit(0);
 }
 
+void osproj::Users::updateAllClientsScreen(int numWrong, std::string wordGuessed, std::string wrongGuesses)
+{
+	// Sends given message to all users in user list
+	User *curPtr = this->userList;
+	do {		
+		close(0);
+		close(1);
+		dup(curPtr->clientFD);
+		dup(curPtr->clientFD);
+		
+		std::string body = "";
+		if(numWrong > 1) {
+			body += "\t|      (_)\n";
+		}
+		if(numWrong > 2) {
+			body += "\t|      \\|/\n";
+		}
+		if(numWrong > 3) {
+			body += "\t|       |\n";
+		}
+		if(numWrong > 4) {
+			body += "\t|      / \\\n";
+		}
+		
+		for(int i = numWrong; i < 5; i++) {
+			body += "\t|\n";
+		}
+		
+		std::string s = wordGuessed;
+		std::replace( s.begin(), s.end(), '$', '_'); // replace all '$' to '_'
+	
+		std::cout << std::string(50,'\n');
+		std::cout << "Multiplayer Hangman:\n";
+		std::cout << "____________________\n\n";
+		std::cout << 
+			 "\t________\n" <<
+			 "\t|/      |\n" <<
+		     body <<
+		     "\t|\n" <<
+		 	"\t|___\n";
+		
+		curPtr = curPtr->next;
+		std::cout << "____________________\n";
+		std::cout << "Mystery Word: " << s << "\n";
+		std::cout << "Used Letters: " << wrongGuesses << "\n";
+		std::cout << "____________________\n";
+	} while(curPtr!=NULL && curPtr->clientFD != this->userList->clientFD);
+}
+
 bool osproj::Users::userIsActive(int clientFD) {
 	// Returns true if user is active
 	int result = write(clientFD, "", 0);
@@ -204,6 +254,7 @@ void osproj::Users::writeToSocket(int clientFD, std::string text)
 {
 	// Writes text to client with given clientFD
 	write(clientFD, text.c_str(), text.length());
+
 }
 
 
