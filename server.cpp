@@ -170,11 +170,12 @@ void *playGame(void *placeholder) {
 	 			userList->sendMessageToAllClients("That's five wrong guesses! The guessers lose! The chooser wins!\n");
 	 			gameOver = true;
 	 			winningUserFD = userList->getChooser()->clientFD;	//This line may not be necessary, but oh well.
-
+				updateClientScreens();
+				continue;
 	 		}
 
 	 		updateClientScreens();
-	 		if (gameOver) winningUserFD = userList->getChooser()->clientFD;
+	 		if (gameOver) winningUserFD = userList->getCurrentGuesser()->clientFD;
 	 	}
 	}
 	cout << "Leaving Game Loop" << endl;
