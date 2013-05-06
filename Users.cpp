@@ -10,6 +10,8 @@
 #include <pthread.h>
 #include <sys/time.h>
 #include <ncurses.h>
+#include <algorithm>
+
 
 pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
 pthread_cond_t cond = PTHREAD_COND_INITIALIZER;
