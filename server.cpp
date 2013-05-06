@@ -187,8 +187,11 @@ void setWordGuessed() {
 	wordGuessed="";
 
 	for(unsigned int i =0; i < wordUnguessed.length(); i++) {
-		if ( wordUnguessed.at(i) == ' ')
-			wordGuessed+=" ";
+		if ( wordUnguessed.at(i) == ' ') wordGuessed+=" ";
+		else if ( wordUnguessed.at(i) == '!') wordGuessed+="!";
+		else if ( wordUnguessed.at(i) == '?') wordGuessed+="?";
+		else if ( wordUnguessed.at(i) == ',') wordGuessed+=",";
+		else if ( wordUnguessed.at(i) == '.') wordGuessed+=".";
 		else
 			wordGuessed+="$";
 	}
