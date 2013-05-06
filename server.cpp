@@ -149,6 +149,7 @@ void *playGame(void *placeholder) {
 	 				userList->writeToSocket(userList->getCurrentGuesser()->clientFD, "You cannot guess that symbol.\n");
 	 				guessedIllegalSymbol = true; 
 	 			}
+	
 	 		} while(alreadyGuessed || guessedIllegalSymbol);
 	 		lettersGuessed.push_back(guess);
 
@@ -163,6 +164,7 @@ void *playGame(void *placeholder) {
 	 		cout << "Word: " << wordUnguessed <<endl << "Hidden Word: " << wordGuessed << endl;
 
 	 		gameOver = gameIsOver();
+			
 	 		if(numIncorrectGuesses == 5) {
 	 			userList->sendMessageToAllClients("That's five wrong guesses! The guessers lose! The chooser wins!\n");
 	 			gameOver = true;

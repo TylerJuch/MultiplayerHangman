@@ -168,7 +168,7 @@ void* osproj::Users::timedWait(void* arg) {
 	
 	struct timespec timeToWait;
   	struct timeval now;
-	int timeInSec = 20;
+	int timeInSec = 10;
 
 	gettimeofday(&now,NULL);
 
@@ -286,12 +286,17 @@ void osproj::Users::addNewUserToUserList(int clientFD)
 
 void osproj::Users::removeUserFromList(int clientFD) {
 	// Removes user from user list with given clientFD
+	
 	if (this->userList->next == NULL){
+		std::cerr << "inf irst";
 		delete(this->userList);
 	}
+
 	User *previousUser;
 	User *curPtr = this->userList;
 	if (curPtr->clientFD == clientFD){
+		std::cerr << "head = client ID";
+		
 		User *temp = this->userList;
 
 		do {
@@ -300,31 +305,28 @@ void osproj::Users::removeUserFromList(int clientFD) {
 		} while((curPtr->next)->clientFD != (this->userList)->clientFD);
 		previousUser->next = this->userList;
 		this->userList = this->userList->next;
-
+		
 		delete temp;
 	}
 	else {
 		previousUser = curPtr;
 		curPtr = curPtr->next;
 
-		if (curPtr->clientFD == this->userList->clientFD) {
+		if (curPtr->clientFD == this->userList->clientFD) {			
 			return;
 		}
-		if (curPtr->clientFD == clientFD) {
-			previousUser->next = curPtr->next;
-			
-			delete curPtr;
-			delete previousUser;
-			this->numOfUsers--;
+		while (curPtr->clientFD != clientFD) {
+			previousUser = curPtr;
+			curPtr = curPtr->next;
+		}
+		
+		previousUser->next = curPtr->next;
+		
+		delete curPtr;
+		this->numOfUsers--;
 
-			return;
-		}
+		return;
 	}
-	delete previousUser;
 	delete curPtr;
 	this->numOfUsers--;
 }
-
-
-
-
