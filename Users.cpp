@@ -285,48 +285,26 @@ void osproj::Users::addNewUserToUserList(int clientFD)
 }
 
 void osproj::Users::removeUserFromList(int clientFD) {
-	// Removes user from user list with given clientFD
-	
-	if (this->userList->next == NULL){
-		std::cerr << "inf irst";
-		delete(this->userList);
-	}
 
 	User *previousUser;
 	User *curPtr = this->userList;
-	if (curPtr->clientFD == clientFD){
-		std::cerr << "head = client ID";
-		
-		User *temp = this->userList;
 
-		do {
-			previousUser = curPtr;
-			curPtr = curPtr->next;
-		} while((curPtr->next)->clientFD != (this->userList)->clientFD);
-		previousUser->next = this->userList;
-		this->userList = this->userList->next;
-		
-		delete temp;
+	previousUser = curPtr;
+	curPtr = curPtr->next;
+
+	if (curPtr->clientFD == this->userList->clientFD) {		
+		this->userList = curPtr->next;	
 	}
-	else {
+	while (curPtr->clientFD != clientFD) {
 		previousUser = curPtr;
 		curPtr = curPtr->next;
-
-		if (curPtr->clientFD == this->userList->clientFD) {			
-			return;
-		}
-		while (curPtr->clientFD != clientFD) {
-			previousUser = curPtr;
-			curPtr = curPtr->next;
-		}
-		
-		previousUser->next = curPtr->next;
-		
-		delete curPtr;
-		this->numOfUsers--;
-
-		return;
 	}
+	
+	previousUser->next = curPtr->next;
+	
 	delete curPtr;
 	this->numOfUsers--;
+
+	return;
+
 }
