@@ -164,7 +164,7 @@ void *playGame(void *placeholder) {
 
 	 		gameOver = gameIsOver();
 	 		if(numIncorrectGuesses == 5) {
-	 			userList->sendMessageToAllClients("That's five wrong guesses! The guessors lose! The chooser wins!\n");
+	 			userList->sendMessageToAllClients("That's five wrong guesses! The guessers lose! The chooser wins!\n");
 	 			gameOver = true;
 	 			winningUserFD = userList->getChooser()->clientFD;	//This line may not be necessary, but oh well.
 

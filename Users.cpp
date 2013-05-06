@@ -102,7 +102,7 @@ char osproj::Users::getLetterFromGuesser()
 std::string osproj::Users::getWordFromChooser() 
 {
 	// Returns the word chosen by the chooser
-	writeToSocket((this->chooser)->clientFD, "Enter a word for the guessors to guess: ");
+	writeToSocket((this->chooser)->clientFD, "Enter a word for the guessers to guess: ");
 	std::string word = readFromSocket((this->chooser)->clientFD);
 	return word.substr(0, word.length()-2);
 }
@@ -165,11 +165,10 @@ void osproj::Users::setNextGuesser() {
 }
 
 void* osproj::Users::timedWait(void* arg) {
-	std::cout<<"In timer function"<<std::endl;
 	
 	struct timespec timeToWait;
   	struct timeval now;
-	int timeInSec = 10;
+	int timeInSec = 20;
 
 	gettimeofday(&now,NULL);
 
