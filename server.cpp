@@ -163,7 +163,8 @@ void *playGame(void *placeholder) {
 
 	 		cout << "Word: " << wordUnguessed <<endl << "Hidden Word: " << wordGuessed << endl;
 
-	 		gameOver = gameIsOver();
+			//ghetto rigged to look for '~' when only 1 player is left
+	 		gameOver = gameIsOver() || (guess == '~');
 			
 	 		if(numIncorrectGuesses == 5) {
 	 			userList->sendMessageToAllClients("That's five wrong guesses! The guessers lose! The chooser wins!\n");

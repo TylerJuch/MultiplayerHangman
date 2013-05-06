@@ -91,7 +91,8 @@ char osproj::Users::getLetterFromGuesser()
 
 			if (isOneUser()) {
 				std::cout<<"Only one user!"<<std::endl;
-				exit(0);
+				//ghetto rigged to return '~' when only 1 player is left. This will exit game loop
+				return '~';
 			}
 		}
 	} while(!fromInput);
